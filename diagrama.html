@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Diagrama UML — Scraper Libros</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d0f14;
+    --surface:  #151820;
+    --border:   #2a2f3e;
+    --accent:   #5b8cff;
+    --accent2:  #ff6b6b;
+    --accent3:  #4ecdc4;
+    --text:     #e2e8f0;
+    --muted:    #6b7280;
+    --pk:       #ffd166;
+    --fk:       #06d6a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    overflow-x: hidden;
+  }
+
+  /* fondo con grid sutil */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(91,140,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91,140,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitulo {
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-bottom: 50px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ── Canvas SVG ── */
+  #canvas {
+    width: 100%;
+    max-width: 960px;
+    height: 600px;
+    position: relative;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* ── Tabla ── */
+  .tabla-grupo { cursor: default; }
+
+  .tabla-caja {
+    fill: var(--surface);
+    stroke: var(--border);
+    stroke-width: 1.5;
+    rx: 10;
+    filter: drop-shadow(0 4px 24px rgba(0,0,0,0.5));
+    transition: stroke 0.2s;
+  }
+
+  .tabla-grupo:hover .tabla-caja {
+    stroke: var(--accent);
+  }
+
+  .tabla-header {
+    fill: var(--accent);
+    rx: 10;
+  }
+
+  .tabla-header-texto {
+    fill: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .campo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    fill: var(--text);
+  }
+
+  .campo-pk { fill: var(--pk); font-weight: 700; }
+  .campo-fk { fill: var(--fk); }
+  .campo-tipo { fill: var(--muted); font-size: 10px; }
+
+  .separador {
+    stroke: var(--border);
+    stroke-width: 1;
+  }
+
+  /* ── Líneas de relación ── */
+  .linea-relacion {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 6 3;
+    opacity: 0.6;
+  }
+
+  .linea-nm {
+    stroke: var(--accent3);
+  }
+
+  .etiqueta-relacion {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    fill: var(--muted);
+  }
+
+  .etiqueta-bg {
+    fill: var(--bg);
+  }
+
+  /* ── Leyenda ── */
+  .leyenda {
+    display: flex;
+    gap: 30px;
+    margin-top: 30px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 24px;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .leyenda-item { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; }
+  .dot-pk  { background: var(--pk); }
+  .dot-fk  { background: var(--fk); }
+  .dot-acc { background: var(--accent); }
+  .dot-nm  { background: var(--accent3); }
+
+  /* animación de entrada */
+  .tabla-grupo {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards;
+  }
+  .tabla-grupo:nth-child(1) { animation-delay: 0.1s; }
+  .tabla-grupo:nth-child(2) { animation-delay: 0.25s; }
+  .tabla-grupo:nth-child(3) { animation-delay: 0.4s; }
+  .tabla-grupo:nth-child(4) { animation-delay: 0.55s; }
+
+  .lineas-grupo {
+    opacity: 0;
+    animation: fadeIn 0.5s ease 0.8s forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Diagrama de Clases UML</h1>
+<p class="subtitulo">books.toscrape.com — Modelo de base de datos</p>
+
+<div id="canvas">
+<svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ─── LÍNEAS DE RELACIÓN (van debajo de las tablas) ─── -->
+  <g class="lineas-grupo">
+
+    <!-- categorias → libros  (1:N) -->
+    <line class="linea-relacion" x1="210" y1="160" x2="310" y2="160"/>
+    <!-- notación 1 -->
+    <line stroke="#5b8cff" stroke-width="1.5" opacity="0.6" x1="210" y1="153" x2="210" y2="167"/>
+    <!-- notación N (crow's foot) -->
+    <line stroke="#5b8cff" stroke-width="1.5" opacity="0.6" x1="310" y1="153" x2="305" y2="160"/>
+    <line stroke="#5b8cff" stroke-width="1.5" opacity="0.6" x1="310" y1="167" x2="305" y2="160"/>
+    <!-- etiqueta -->
+    <rect class="etiqueta-bg" x="235" y="143" width="50" height="16" rx="3"/>
+    <text class="etiqueta-relacion" x="260" y="155" text-anchor="middle">1 : N</text>
+
+    <!-- libros → libros_autores  (1:N) -->
+    <line class="linea-relacion linea-nm" x1="530" y1="200" x2="600" y2="280"/>
+    <rect class="etiqueta-bg" x="542" y="228" width="50" height="16" rx="3"/>
+    <text class="etiqueta-relacion" x="567" y="240" text-anchor="middle" fill="#4ecdc4">1 : N</text>
+
+    <!-- autores → libros_autores  (1:N) -->
+    <line class="linea-relacion linea-nm" x1="750" y1="200" x2="720" y2="280"/>
+    <rect class="etiqueta-bg" x="718" y="228" width="50" height="16" rx="3"/>
+    <text class="etiqueta-relacion" x="743" y="240" text-anchor="middle" fill="#4ecdc4">1 : N</text>
+
+    <!-- flecha N:M entre libros y autores (curva) -->
+    <path class="linea-relacion linea-nm" stroke-dasharray="4 4"
+          d="M 530 150 Q 640 80 750 150" />
+    <rect class="etiqueta-bg" x="616" y="88" width="50" height="16" rx="3"/>
+    <text class="etiqueta-relacion" x="641" y="100" text-anchor="middle" fill="#4ecdc4">N : M</text>
+
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       TABLA: categorias  (x=30, y=80)
+  ══════════════════════════════════════════ -->
+  <g class="tabla-grupo">
+    <!-- sombra -->
+    <rect x="32" y="82" width="180" height="170" rx="10" fill="rgba(0,0,0,0.4)"/>
+    <!-- cuerpo -->
+    <rect class="tabla-caja" x="30" y="80" width="180" height="170" rx="10"/>
+    <!-- header -->
+    <rect x="30" y="80" width="180" height="34" rx="10" fill="#5b8cff"/>
+    <rect x="30" y="100" width="180" height="14" fill="#5b8cff"/>
+    <text class="tabla-header-texto" x="120" y="102" text-anchor="middle">categorias</text>
+
+    <!-- separador -->
+    <line class="separador" x1="30" y1="114" x2="210" y2="114"/>
+
+    <!-- campos -->
+    <text class="campo campo-pk" x="44" y="134">🔑 id_categoria</text>
+    <text class="campo-tipo" x="44" y="147" font-family="JetBrains Mono">INT · PK · AI</text>
+
+    <line class="separador" x1="30" y1="154" x2="210" y2="154"/>
+
+    <text class="campo" x="44" y="172">nombre</text>
+    <text class="campo-tipo" x="44" y="185" font-family="JetBrains Mono">VARCHAR(100)</text>
+
+    <line class="separador" x1="30" y1="192" x2="210" y2="192"/>
+
+    <text class="campo campo-fk" x="44" y="212">— libros (1:N)</text>
+    <text class="campo-tipo" x="44" y="225" font-family="JetBrains Mono">via id_categoria</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       TABLA: libros  (x=310, y=60)
+  ══════════════════════════════════════════ -->
+  <g class="tabla-grupo">
+    <rect x="312" y="62" width="220" height="260" rx="10" fill="rgba(0,0,0,0.4)"/>
+    <rect class="tabla-caja" x="310" y="60" width="220" height="260" rx="10"/>
+    <rect x="310" y="60" width="220" height="34" rx="10" fill="#5b8cff"/>
+    <rect x="310" y="80" width="220" height="14" fill="#5b8cff"/>
+    <text class="tabla-header-texto" x="420" y="82" text-anchor="middle">libros</text>
+
+    <line class="separador" x1="310" y1="94" x2="530" y2="94"/>
+
+    <text class="campo campo-pk" x="324" y="114">🔑 id_libro</text>
+    <text class="campo-tipo" x="324" y="127" font-family="JetBrains Mono">INT · PK · AI</text>
+
+    <line class="separador" x1="310" y1="134" x2="530" y2="134"/>
+
+    <text class="campo" x="324" y="152">titulo</text>
+    <text class="campo-tipo" x="324" y="165" font-family="JetBrains Mono">VARCHAR(500)</text>
+
+    <text class="campo" x="324" y="183">precio</text>
+    <text class="campo-tipo" x="324" y="196" font-family="JetBrains Mono">DECIMAL(10,2)</text>
+
+    <text class="campo" x="324" y="214">calificacion</text>
+    <text class="campo-tipo" x="324" y="227" font-family="JetBrains Mono">TINYINT</text>
+
+    <text class="campo" x="324" y="245">disponible</text>
+    <text class="campo-tipo" x="324" y="258" font-family="JetBrains Mono">VARCHAR(50)</text>
+
+    <line class="separador" x1="310" y1="265" x2="530" y2="265"/>
+
+    <text class="campo campo-fk" x="324" y="283">🔗 id_categoria</text>
+    <text class="campo-tipo" x="324" y="296" font-family="JetBrains Mono">INT · FK → categorias</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       TABLA: libros_autores  (x=580, y=270)
+  ══════════════════════════════════════════ -->
+  <g class="tabla-grupo">
+    <rect x="582" y="272" width="200" height="150" rx="10" fill="rgba(0,0,0,0.4)"/>
+    <rect class="tabla-caja" x="580" y="270" width="200" height="150" rx="10" stroke="#4ecdc4"/>
+    <rect x="580" y="270" width="200" height="34" rx="10" fill="#4ecdc4"/>
+    <rect x="580" y="290" width="200" height="14" fill="#4ecdc4"/>
+    <text class="tabla-header-texto" x="680" y="292" text-anchor="middle" fill="#0d0f14">libros_autores</text>
+
+    <line class="separador" x1="580" y1="304" x2="780" y2="304"/>
+
+    <text class="campo campo-fk" x="594" y="324">🔗 id_libro</text>
+    <text class="campo-tipo" x="594" y="337" font-family="JetBrains Mono">INT · FK → libros</text>
+
+    <line class="separador" x1="580" y1="344" x2="780" y2="344"/>
+
+    <text class="campo campo-fk" x="594" y="364">🔗 id_autor</text>
+    <text class="campo-tipo" x="594" y="377" font-family="JetBrains Mono">INT · FK → autores</text>
+
+    <line class="separador" x1="580" y1="384" x2="780" y2="384"/>
+
+    <text class="campo campo-pk" x="594" y="404">PK compuesta (ambos)</text>
+  </g>
+
+  <!-- ══════════════════════════════════════════
+       TABLA: autores  (x=730, y=60)
+  ══════════════════════════════════════════ -->
+  <g class="tabla-grupo">
+    <rect x="732" y="62" width="190" height="150" rx="10" fill="rgba(0,0,0,0.4)"/>
+    <rect class="tabla-caja" x="730" y="60" width="190" height="150" rx="10"/>
+    <rect x="730" y="60" width="190" height="34" rx="10" fill="#5b8cff"/>
+    <rect x="730" y="80" width="190" height="14" fill="#5b8cff"/>
+    <text class="tabla-header-texto" x="825" y="82" text-anchor="middle">autores</text>
+
+    <line class="separador" x1="730" y1="94" x2="920" y2="94"/>
+
+    <text class="campo campo-pk" x="744" y="114">🔑 id_autor</text>
+    <text class="campo-tipo" x="744" y="127" font-family="JetBrains Mono">INT · PK · AI</text>
+
+    <line class="separador" x1="730" y1="134" x2="920" y2="134"/>
+
+    <text class="campo" x="744" y="154">nombre</text>
+    <text class="campo-tipo" x="744" y="167" font-family="JetBrains Mono">VARCHAR(200)</text>
+
+    <line class="separador" x1="730" y1="174" x2="920" y2="174"/>
+
+    <text class="campo campo-fk" x="744" y="194">— libros (N:M)</text>
+    <text class="campo-tipo" x="744" y="207" font-family="JetBrains Mono">via libros_autores</text>
+  </g>
+
+</svg>
+</div>
+
+<!-- Leyenda -->
+<div class="leyenda">
+  <div class="leyenda-item"><div class="dot dot-pk"></div> PK — Primary Key</div>
+  <div class="leyenda-item"><div class="dot dot-fk"></div> FK — Foreign Key</div>
+  <div class="leyenda-item"><div class="dot dot-acc"></div> Relación 1:N</div>
+  <div class="leyenda-item"><div class="dot dot-nm"></div> Relación N:M</div>
+</div>
+
+</body>
+</html>
