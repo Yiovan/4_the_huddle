@@ -1,2 +1,15 @@
+# base de datos y notas personales
+libros_db/
+libros_db
 libros.db
+scrapping.md
 SCRAPING.md
+
+# archivos de Jupyter / Python
+*.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# otros formatos de BD locales
+*.sqlite
+*.db
